@@ -3,7 +3,7 @@ const socketio = require('socket.io');
 
 const initializeSocket = (server, io) => {
     //   const io = socketio(server);
-    const socketToUser = {};
+
     io.on('connection', (socket) => {
         console.log('A user connected:', socket.id);
 
@@ -12,9 +12,7 @@ const initializeSocket = (server, io) => {
         });
 
 
-        // socket.on("disconnect", () => {
-        //     socket.broadcast.emit("callEnded")
-        // })
+
 
         socket.on("callUser", (data) => {
             io.to(data.userToCall).emit("callUser", { signal: data.signalData, from: data.from, name: data.name })
@@ -32,14 +30,24 @@ const initializeSocket = (server, io) => {
 
 
         });
+        socket.on('isTyping',({senderId, recipientId,isTyping})=>{
+            const roomName = [senderId, recipientId].sort().join('-');
+
+            socket.to(roomName).emit('isUserTyping',isTyping)
+        })
         socket.on('idexchange', ({ id, senderId, recipientId }) => {
             const roomName = [senderId, recipientId].sort().join('-');
             io.to(roomName).emit('getid', { id });
         })
-        socket.on('sendFile', ({ file, senderId, recipientId, messageType }) => {
-            
-            const roomName = [senderId, recipientId].sort().join('-');
-            io.to(roomName).emit('receiveFile', { messageType, senderId, file });
+        socket.on('sendFile', ({ file, senderId, recipientId, messageType, fileType }) => {
+            try {
+                console.log(' i ran')
+                const roomName = [senderId, recipientId].sort().join('-');
+                io.to(roomName).emit('receiveFile', { messageType, senderId, file, fileType });
+            } catch (error) {
+                console.log(error)
+
+            }
 
         })
 
@@ -69,12 +77,7 @@ const initializeSocket = (server, io) => {
 
         socket.on('disconnect', () => {
             console.log('A user disconnected:', socket.id);
-            const callerId = socketToUser[socket.id];
-            if (callerId) {
-                io.to(callerId).emit('userDisconnected', { disconnectedUserId: socket.id });
-                delete socketToUser[socket.id];
-                delete socketToUser[callerId];
-            }
+
         });
     });
 
